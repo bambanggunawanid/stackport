@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/stackport_logo.svg" alt="StackPort — Universal AWS Resource Browser" width="150"/>
+  <img src="https://raw.githubusercontent.com/DaviReisVieira/stackport/main/docs/images/stackport_logo.svg" alt="StackPort — Universal AWS Resource Browser" width="150"/>
 </p>
 
 <h1 align="center">StackPort</h1>
@@ -18,13 +18,13 @@
 ## Screenshots
 
 **Dashboard** — Service overview with resource counts and health status
-![StackPort Dashboard](docs/images/dashboard.jpeg?v=1)
+![StackPort Dashboard](https://raw.githubusercontent.com/DaviReisVieira/stackport/main/docs/images/dashboard.jpeg)
 
 **DynamoDB Browser** — Generic resource table with search, pagination, and detail view
-![DynamoDB Resources](docs/images/dynamo.jpeg?v=1)
+![DynamoDB Resources](https://raw.githubusercontent.com/DaviReisVieira/stackport/main/docs/images/dynamo.jpeg)
 
 **S3 Browser** — File browser with folder navigation and object preview
-![S3 Browser](docs/images/s3.jpeg?v=1)
+![S3 Browser](https://raw.githubusercontent.com/DaviReisVieira/stackport/main/docs/images/s3.jpeg)
 
 ## Features
 

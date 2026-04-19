@@ -66,6 +66,12 @@ import {
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const
 
+function isFileDrag(e: React.DragEvent): boolean {
+  const types = e.dataTransfer?.types
+  if (!types) return false
+  return Array.from(types as unknown as Iterable<string>).includes('Files')
+}
+
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B'
@@ -176,8 +182,7 @@ export function S3Browser() {
   const fileUploadRef = useRef<HTMLInputElement>(null)
 
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set())
-  const [dragDepth, setDragDepth] = useState(0)
-  /** Mirrors backend default until `fetchS3UploadConfig` resolves. */
+  const [fileDragActive, setFileDragActive] = useState(false)
   const [maxUploadBytes, setMaxUploadBytes] = useState<number | null>(null)
   const [uploadProgress, setUploadProgress] = useState<{ name: string; percent: number } | null>(null)
   const uploadAbortRef = useRef<(() => void) | null>(null)
@@ -423,9 +428,29 @@ export function S3Browser() {
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setDragDepth(0)
+    setFileDragActive(false)
     const f = e.dataTransfer.files?.[0]
     if (f) startUpload(f)
+  }
+
+  const onObjectListDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!isFileDrag(e)) return
+    setFileDragActive(true)
+  }
+
+  const onObjectListDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const next = e.relatedTarget as Node | null
+    if (next && e.currentTarget.contains(next)) return
+    setFileDragActive(false)
+  }
+
+  const onObjectListDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
   }
 
   const confirmDeleteAction = async () => {
@@ -618,11 +643,11 @@ export function S3Browser() {
     )
   }
 
-  // Object browser view
+  // Object browser view — fill ResourceBrowser pane (flex chain from Layout main)
   return (
-    <div className="space-y-4">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-4">
       {/* Breadcrumb navigation */}
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => setSelectedBucket(null)} className="h-8">
           <ArrowLeft className="h-4 w-4 mr-1" />
           Back
@@ -638,32 +663,24 @@ export function S3Browser() {
         onChange={onFileInputChange}
       />
 
-      {/* Objects table */}
       <div
-        className="relative rounded-lg border border-transparent"
-        onDragEnter={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          setDragDepth((d) => d + 1)
-        }}
-        onDragLeave={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          setDragDepth((d) => Math.max(0, d - 1))
-        }}
-        onDragOver={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-        }}
+        data-testid="s3-object-drop-zone"
+        className="relative flex min-h-0 flex-1 flex-col rounded-lg border border-transparent"
+        aria-label="Object list — drop a file here to upload"
+        onDragEnter={onObjectListDragEnter}
+        onDragLeave={onObjectListDragLeave}
+        onDragOver={onObjectListDragOver}
         onDrop={onDrop}
       >
-        {dragDepth > 0 && (
+        {fileDragActive && (
           <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-background/90 text-sm font-medium text-primary">
             Drop file to upload
           </div>
         )}
-        <Card className={dragDepth > 0 ? 'ring-2 ring-primary/30' : ''}>
-        <CardHeader className="p-4 pb-2">
+        <Card
+          className={`flex h-full min-h-0 flex-1 flex-col ${fileDragActive ? 'ring-2 ring-primary/30' : ''}`}
+        >
+        <CardHeader className="shrink-0 p-4 pb-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <CardTitle className="text-sm font-medium truncate">
@@ -729,23 +746,26 @@ export function S3Browser() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
           {loadingObjects ? (
-            <div className="p-4 space-y-2">
+            <div className="flex-1 space-y-2 p-4">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-10 w-full" />
               ))}
             </div>
           ) : objectsData && (objectsData.folders.length > 0 || objectsData.files.length > 0) ? (
-            <>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {allItems.length === 0 && fileSearch ? (
-              <EmptyState
-                icon={Search}
-                title="No matching files"
-                description={`No files or folders match "${fileSearch}".`}
-              />
+              <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-8">
+                <EmptyState
+                  icon={Search}
+                  title="No matching files"
+                  description={`No files or folders match "${fileSearch}".`}
+                />
+              </div>
             ) : (
-            <>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -880,8 +900,9 @@ export function S3Browser() {
                 })}
               </TableBody>
             </Table>
+            </div>
             {allItems.length > pageSize && (
-              <div className="border-t">
+              <div className="shrink-0 border-t">
                 <PaginationBar
                   page={filePage}
                   totalPages={fileTotalPages}
@@ -892,15 +913,17 @@ export function S3Browser() {
                 />
               </div>
             )}
-            </>
+            </div>
             )}
-            </>
+            </div>
           ) : (
-            <EmptyState
-              icon={Folder}
-              title={prefix ? 'Empty folder' : 'Empty bucket'}
-              description="No objects in this location. Upload a file or create a folder."
-            />
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-8">
+              <EmptyState
+                icon={Folder}
+                title={prefix ? 'Empty folder' : 'Empty bucket'}
+                description="No objects in this location. Upload a file or create a folder."
+              />
+            </div>
           )}
         </CardContent>
         </Card>

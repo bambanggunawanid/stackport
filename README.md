@@ -21,8 +21,8 @@
 **Dashboard** — Service overview with resource counts and health status
 ![StackPort Dashboard](https://raw.githubusercontent.com/DaviReisVieira/stackport/main/docs/images/dashboard.jpeg)
 
-**DynamoDB Browser** — Query and scan tables with schema visualization
-![DynamoDB Resources](https://raw.githubusercontent.com/DaviReisVieira/stackport/main/docs/images/dynamo.jpeg)
+**Lambda Browser** — Function list with config, aliases, versions, event sources, and invocation panel
+![Lambda Resources](https://raw.githubusercontent.com/DaviReisVieira/stackport/main/docs/images/lambda.jpeg)
 
 **S3 Browser** — File browser with upload, download, folder navigation, and tagging
 ![S3 Browser](https://raw.githubusercontent.com/DaviReisVieira/stackport/main/docs/images/s3.jpeg)

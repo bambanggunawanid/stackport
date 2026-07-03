@@ -38,6 +38,49 @@ def _decode_user_data(encoded: str | None) -> str | None:
     except Exception:
         return None
 
+def _map_asg_instance(inst: dict) -> dict:
+    """Map an Auto Scaling Group instance to a camelCase shape."""
+    return {
+        "instanceId": inst.get("InstanceId"),
+        "instanceType": inst.get("InstanceType"),
+        "lifecycleState": inst.get("LifecycleState"),
+        "healthStatus": inst.get("HealthStatus"),
+        "availabilityZone": inst.get("AvailabilityZone"),
+    }
+
+
+@router.get("/asgs")
+def list_autoscaling_groups(ep: EndpointInfo = Depends(get_endpoint_info)) -> dict[str, Any]:
+    """List all Auto Scaling Groups with their instances."""
+    try:
+        client = get_client("autoscaling", **ep.client_kwargs())
+        paginator = client.get_paginator("describe_auto_scaling_groups")
+
+        all_groups = []
+        for page in paginator.paginate():
+            for group in page.get("AutoScalingGroups", []):
+                created_time = group.get("CreatedTime")
+                instances = group.get("Instances", [])
+                all_groups.append(
+                    {
+                        "autoScalingGroupARN": group["AutoScalingGroupARN"],
+                        "autoScalingGroupName": group["AutoScalingGroupName"],
+                        "createdTime": created_time.isoformat() if created_time else None,
+                        "desiredCapacity": group["DesiredCapacity"],
+                        "maxSize": group["MaxSize"],
+                        "minSize": group["MinSize"],
+                        "availabilityZones": group.get("AvailabilityZones", []),
+                        "healthCheckGracePeriod": group.get("HealthCheckGracePeriod", 0),
+                        "instanceCount": len(instances),
+                        "instances": [_map_asg_instance(i) for i in instances],
+                        "loadBalancerNames": group.get("LoadBalancerNames", []),
+                        "tags": group.get("Tags", []),
+                    }
+                )
+        return {"auto_scaling_groups": all_groups}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/instances")
 def list_instances(ep: EndpointInfo = Depends(get_endpoint_info)) -> dict[str, Any]:

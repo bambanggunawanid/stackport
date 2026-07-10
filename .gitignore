@@ -13,6 +13,7 @@ node_modules/
 build/
 *.whl
 .workspace_rag
+tsconfig.test.tsbuildinfo
 
 # VS Code extension
 /vscode-extension/node_modules/

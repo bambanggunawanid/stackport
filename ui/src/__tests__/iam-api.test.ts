@@ -11,7 +11,7 @@ import {
 } from '@/lib/api'
 
 const mockFetch = vi.fn()
-global.fetch = mockFetch
+globalThis.fetch = mockFetch
 
 beforeEach(() => {
   mockFetch.mockReset()

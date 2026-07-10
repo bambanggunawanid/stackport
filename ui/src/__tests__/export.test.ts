@@ -50,7 +50,7 @@ describe('export utilities', () => {
       const data = [{ id: 'test', nested: { key: 'value' } }];
       let capturedBlob: Blob | null = null;
 
-      createObjectURLSpy.mockImplementation((blob) => {
+      createObjectURLSpy.mockImplementation((blob: Blob) => {
         capturedBlob = blob as Blob;
         return 'blob:mock-url';
       });
@@ -79,7 +79,7 @@ describe('export utilities', () => {
   });
 
   describe('exportToCSV', () => {
-    it('exports data as CSV with header row', () => {
+    it('exports data as CSV with correct filename format', () => {
       const data = [
         { id: 'item1', name: 'Test', count: 10 },
         { id: 'item2', name: 'Another', count: 20 },
@@ -103,7 +103,7 @@ describe('export utilities', () => {
       ];
       let capturedBlob: Blob | null = null;
 
-      createObjectURLSpy.mockImplementation((blob) => {
+      createObjectURLSpy.mockImplementation((blob: Blob) => {
         capturedBlob = blob as Blob;
         return 'blob:mock-url';
       });
@@ -125,7 +125,7 @@ describe('export utilities', () => {
       ];
       let capturedBlob: Blob | null = null;
 
-      createObjectURLSpy.mockImplementation((blob) => {
+      createObjectURLSpy.mockImplementation((blob: Blob) => {
         capturedBlob = blob as Blob;
         return 'blob:mock-url';
       });

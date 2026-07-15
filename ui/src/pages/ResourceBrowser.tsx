@@ -126,6 +126,12 @@ export default function ResourceBrowser() {
       setLastUpdated(null)
       return
     }
+    if (SERVICE_VIEWS[service]) {
+      setResources(null)
+      setResourceError(null)
+      setLastUpdated(null)
+      return
+    }
     setLoadingResources(true)
     setResourceError(null)
     setPages({})
@@ -191,6 +197,8 @@ export default function ResourceBrowser() {
 
   const refreshResources = () => {
     if (!service) return
+    // Skip generic resource fetch for services with custom browser views
+    if (SERVICE_VIEWS[service]) return
     setLoadingResources(true)
     setResourceError(null)
     fetchResources(service, undefined, activeEndpoint)

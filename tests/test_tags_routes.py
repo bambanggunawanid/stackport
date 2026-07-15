@@ -326,6 +326,122 @@ class TestGetResourceTags:
         assert resp.status_code == 400
         assert "not supported" in resp.json()["detail"].lower()
 
+    @patch("backend.routes.tags.get_client")
+    def test_get_ecs_cluster_tags(self, mock_gc):
+        """Test ECS cluster tags - uses lowercase 'key'/'value' format."""
+        mock_client = MagicMock()
+        mock_client.describe_clusters.return_value = {
+            "clusters": [
+                {
+                    "clusterArn": "arn:aws:ecs:us-east-1:000:cluster/web-saas-development-ecs-cluster",
+                    "tags": [
+                        {"key": "env", "value": "dev"},
+                        {"key": "team", "value": "platform"},
+                    ],
+                }
+            ]
+        }
+        mock_gc.return_value = mock_client
+
+        resp = client.get("/api/tags/ecs/clusters/web-saas-development-ecs-cluster")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["tags"] == {"env": "dev", "team": "platform"}
+        assert data["service"] == "ecs"
+        assert data["type"] == "clusters"
+        assert data["id"] == "web-saas-development-ecs-cluster"
+
+    @patch("backend.routes.tags.get_client")
+    def test_get_ecs_cluster_tags_empty(self, mock_gc):
+        """Test ECS cluster with no tags - should return empty dict."""
+        mock_client = MagicMock()
+        mock_client.describe_clusters.return_value = {
+            "clusters": [
+                {
+                    "clusterArn": "arn:aws:ecs:us-east-1:000:cluster/empty-cluster",
+                    "tags": [],
+                }
+            ]
+        }
+        mock_gc.return_value = mock_client
+
+        resp = client.get("/api/tags/ecs/clusters/empty-cluster")
+        assert resp.status_code == 200
+        assert resp.json()["tags"] == {}
+
+    @patch("backend.routes.tags.get_client")
+    def test_get_ecs_cluster_tags_null(self, mock_gc):
+        """Test ECS cluster with null tags - should return empty dict."""
+        mock_client = MagicMock()
+        mock_client.describe_clusters.return_value = {
+            "clusters": [
+                {
+                    "clusterArn": "arn:aws:ecs:us-east-1:000:cluster/null-tags-cluster",
+                    "tags": None,
+                }
+            ]
+        }
+        mock_gc.return_value = mock_client
+
+        resp = client.get("/api/tags/ecs/clusters/null-tags-cluster")
+        assert resp.status_code == 200
+        assert resp.json()["tags"] == {}
+
+    @patch("backend.routes.tags.get_client")
+    def test_get_ecs_service_tags(self, mock_gc):
+        """Test ECS service tags - uses lowercase 'key'/'value' format."""
+        mock_client = MagicMock()
+        mock_client.describe_services.return_value = {
+            "services": [
+                {
+                    "serviceArn": "arn:aws:ecs:us-east-1:000:service/my-cluster/my-service",
+                    "tags": [
+                        {"key": "app", "value": "web"},
+                        {"key": "version", "value": "2.0"},
+                    ],
+                }
+            ]
+        }
+        mock_gc.return_value = mock_client
+
+        resp = client.get("/api/tags/ecs/services/my-cluster/my-service")
+        assert resp.status_code == 200
+        assert resp.json()["tags"] == {"app": "web", "version": "2.0"}
+
+    @patch("backend.routes.tags.get_client")
+    def test_get_ecs_task_tags(self, mock_gc):
+        """Test ECS task tags - uses lowercase 'key'/'value' format."""
+        mock_client = MagicMock()
+        mock_client.describe_tasks.return_value = {
+            "tasks": [
+                {
+                    "taskArn": "arn:aws:ecs:us-east-1:000:task/my-cluster/task-123",
+                    "tags": [{"key": "managed-by", "value": "terraform"}],
+                }
+            ]
+        }
+        mock_gc.return_value = mock_client
+
+        resp = client.get("/api/tags/ecs/tasks/my-cluster/task-123")
+        assert resp.status_code == 200
+        assert resp.json()["tags"] == {"managed-by": "terraform"}
+
+    @patch("backend.routes.tags.get_client")
+    def test_get_ecs_task_definition_tags(self, mock_gc):
+        """Test ECS task definition tags - uses lowercase 'key'/'value' format."""
+        mock_client = MagicMock()
+        mock_client.describe_task_definition.return_value = {
+            "taskDefinition": {
+                "taskDefinitionArn": "arn:aws:ecs:us-east-1:000:task-definition/my-task:1",
+                "tags": [{"key": "family", "value": "batch"}],
+            }
+        }
+        mock_gc.return_value = mock_client
+
+        resp = client.get("/api/tags/ecs/task_definitions/my-task:1")
+        assert resp.status_code == 200
+        assert resp.json()["tags"] == {"family": "batch"}
+
 
 # --- GET /tags/supported ---
 
@@ -336,7 +452,7 @@ class TestTagsSupported:
         assert resp.status_code == 200
         data = resp.json()
         supported = data["supported"]
-        assert len(supported) == 24
+        assert len(supported) == 28
 
         keys = {(s["service"], s["type"]) for s in supported}
         assert ("s3", "buckets") in keys
@@ -358,6 +474,10 @@ class TestTagsSupported:
         assert ("stepfunctions", "state_machines") in keys
         assert ("kinesis", "streams") in keys
         assert ("ssm", "parameters") in keys
+        assert ("ecs", "clusters") in keys
+        assert ("ecs", "services") in keys
+        assert ("ecs", "tasks") in keys
+        assert ("ecs", "task_definitions") in keys
         assert ("elasticloadbalancing", "load_balancers") in keys
         assert ("elasticache", "cache_clusters") in keys
         assert ("cognito-idp", "user_pools") in keys
@@ -370,7 +490,7 @@ class TestTagsSupported:
         writable_lookup = {(e["service"], e["type"]): e["writable"] for e in supported}
         assert writable_lookup[("cloudformation", "stacks")] is False
         writable_count = sum(1 for e in supported if e["writable"])
-        assert writable_count == 23
+        assert writable_count == 27
 
 
 # --- PUT tags ---
@@ -613,6 +733,97 @@ class TestUpdateResourceTags:
             json={"tags": {"a": "b"}},
         )
         assert resp.status_code == 400
+
+    @patch("backend.routes.tags.get_client")
+    def test_put_ecs_cluster_tags(self, mock_gc):
+        """Test setting ECS cluster tags - uses lowercase 'key'/'value' format."""
+        mock_client = MagicMock()
+        mock_client.describe_clusters.return_value = {
+            "clusters": [
+                {
+                    "clusterArn": "arn:aws:ecs:us-east-1:000:cluster/my-cluster",
+                    "tags": [{"key": "old", "value": "tag"}],
+                }
+            ]
+        }
+        mock_gc.return_value = mock_client
+
+        resp = client.put(
+            "/api/tags/ecs/clusters/my-cluster",
+            json={"tags": {"env": "prod", "team": "platform"}},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        assert data["tags"] == {"env": "prod", "team": "platform"}
+        # Verify untag_resource was called to remove old tags
+        mock_client.untag_resource.assert_called_once()
+        # Verify tag_resource was called with new tags
+        mock_client.tag_resource.assert_called_once()
+
+    @patch("backend.routes.tags.get_client")
+    def test_put_ecs_service_tags(self, mock_gc):
+        """Test setting ECS service tags - uses lowercase 'key'/'value' format."""
+        mock_client = MagicMock()
+        mock_client.describe_services.return_value = {
+            "services": [
+                {
+                    "serviceArn": "arn:aws:ecs:us-east-1:000:service/cluster1/svc1",
+                    "tags": [],
+                }
+            ]
+        }
+        mock_gc.return_value = mock_client
+
+        resp = client.put(
+            "/api/tags/ecs/services/cluster1/svc1",
+            json={"tags": {"app": "web"}},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["success"] is True
+        mock_client.tag_resource.assert_called_once()
+
+    @patch("backend.routes.tags.get_client")
+    def test_put_ecs_task_tags(self, mock_gc):
+        """Test setting ECS task tags - uses lowercase 'key'/'value' format."""
+        mock_client = MagicMock()
+        mock_client.describe_tasks.return_value = {
+            "tasks": [
+                {
+                    "taskArn": "arn:aws:ecs:us-east-1:000:task/cluster1/task-123",
+                    "tags": [],
+                }
+            ]
+        }
+        mock_gc.return_value = mock_client
+
+        resp = client.put(
+            "/api/tags/ecs/tasks/cluster1/task-123",
+            json={"tags": {"managed-by": "terraform"}},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["success"] is True
+        mock_client.tag_resource.assert_called_once()
+
+    @patch("backend.routes.tags.get_client")
+    def test_put_ecs_task_definition_tags(self, mock_gc):
+        """Test setting ECS task definition tags - uses lowercase 'key'/'value' format."""
+        mock_client = MagicMock()
+        mock_client.describe_task_definition.return_value = {
+            "taskDefinition": {
+                "taskDefinitionArn": "arn:aws:ecs:us-east-1:000:task-definition/my-task:1",
+                "tags": [],
+            }
+        }
+        mock_gc.return_value = mock_client
+
+        resp = client.put(
+            "/api/tags/ecs/task_definitions/my-task:1",
+            json={"tags": {"family": "batch"}},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["success"] is True
+        mock_client.tag_resource.assert_called_once()
 
     @patch("backend.routes.tags.get_client")
     def test_put_tags_server_error(self, mock_gc):

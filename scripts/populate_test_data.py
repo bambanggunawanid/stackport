@@ -749,23 +749,241 @@ def populate_ecr():
         print(f"ECR error: {e}")
 
 
-def populate_ecs():
-    """Populate ECS with test clusters."""
+def populate_ecs():def populate_ecs():
+    """Populate ECS with test clusters, services, tasks, and task definitions."""
     print("\n=== ECS ===")
     client = get_client("ecs")
 
-    cluster_count = random.randint(1, 3)
+    cluster_count = random.randint(2, 4)
+    created_clusters = []
 
     try:
         for i in range(cluster_count):
             cluster_name = cool_name("cluster", include_env=True, funny=True)
             try:
-                client.create_cluster(clusterName=cluster_name)
-                print(f"  ✓ {cluster_name}")
-            except Exception as e:
-                print(f"  ✗ Error: {e}")
+                # Clean up existing cluster
+                try:
+                    client.delete_cluster(clusterName=cluster_name)
+                except Exception:
+                    pass
 
-        print(f"Created {cluster_count} ECS clusters")
+                response = client.create_cluster(
+                    clusterName=cluster_name,
+                    tags=[
+                        {"key": "Environment", "value": random.choice(["dev", "staging", "prod"])},
+                        {"key": "Team", "value": random.choice(["platform", "backend", "data"])},
+                    ]
+                )
+                created_clusters.append(cluster_name)
+                print(f"  ✓ Cluster: {cluster_name}")
+            except Exception as e:
+                print(f"  ✗ Error creating cluster {cluster_name}: {e}")
+
+        # Create task definitions
+        task_def_families = ["web-app", "api-service", "worker", "scheduler"]
+        created_task_defs = []
+
+        for family in task_def_families:
+            for revision in range(1, random.randint(2, 4)):
+                try:
+                    # Clean up existing task definition
+                    try:
+                        client.deregister_task_definition(taskDefinition=f"{family}:{revision}")
+                    except Exception:
+                        pass
+
+                    container_definitions = []
+
+                    if family == "web-app":
+                        container_definitions = [
+                            {
+                                "name": "nginx",
+                                "image": "nginx:1.25-alpine",
+                                "cpu": 256,
+                                "memory": 512,
+                                "essential": True,
+                                "portMappings": [
+                                    {"containerPort": 80, "hostPort": 80, "protocol": "tcp"},
+                                    {"containerPort": 443, "hostPort": 443, "protocol": "tcp"},
+                                ],
+                                "environment": [
+                                    {"name": "ENVIRONMENT", "value": random.choice(["development", "staging", "production"])},
+                                    {"name": "LOG_LEVEL", "value": random.choice(["info", "debug", "warn"])},
+                                ],
+                                "logConfiguration": {
+                                    "logDriver": "awslogs",
+                                    "options": {
+                                        "awslogs-group": f"/ecs/{family}",
+                                        "awslogs-region": AWS_REGION,
+                                        "awslogs-stream-prefix": "ecs",
+                                    }
+                                },
+                            }
+                        ]
+                    elif family == "api-service":
+                        container_definitions = [
+                            {
+                                "name": "api",
+                                "image": f"public.ecr.aws/myorg/api-service:v{revision}.0",
+                                "cpu": 512,
+                                "memory": 1024,
+                                "essential": True,
+                                "portMappings": [
+                                    {"containerPort": 8080, "hostPort": 8080, "protocol": "tcp"},
+                                ],
+                                "environment": [
+                                    {"name": "DATABASE_URL", "value": "postgres://db:5432/app"},
+                                    {"name": "REDIS_URL", "value": "redis://cache:6379"},
+                                    {"name": "LOG_LEVEL", "value": "info"},
+                                ],
+                                "secrets": [
+                                    {"name": "API_KEY", "valueFrom": f"arn:aws:ssm:{AWS_REGION}:000000000000:parameter/{family}/api-key"},
+                                ],
+                                "logConfiguration": {
+                                    "logDriver": "awslogs",
+                                    "options": {
+                                        "awslogs-group": f"/ecs/{family}",
+                                        "awslogs-region": AWS_REGION,
+                                        "awslogs-stream-prefix": "ecs",
+                                    }
+                                },
+                                "healthCheck": {
+                                    "command": ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"],
+                                    "interval": 30,
+                                    "timeout": 5,
+                                    "retries": 3,
+                                },
+                            },
+                            {
+                                "name": "envoy",
+                                "image": "public.ecr.aws/appmesh/envoy:v1.25",
+                                "cpu": 256,
+                                "memory": 512,
+                                "essential": False,
+                                "logConfiguration": {
+                                    "logDriver": "awslogs",
+                                    "options": {
+                                        "awslogs-group": f"/ecs/{family}-envoy",
+                                        "awslogs-region": AWS_REGION,
+                                        "awslogs-stream-prefix": "envoy",
+                                    }
+                                },
+                            }
+                        ]
+                    elif family == "worker":
+                        container_definitions = [
+                            {
+                                "name": "worker",
+                                "image": f"public.ecr.aws/myorg/worker:v{revision}.0",
+                                "cpu": 1024,
+                                "memory": 2048,
+                                "essential": True,
+                                "environment": [
+                                    {"name": "QUEUE_URL", "value": f"https://sqs.{AWS_REGION}.amazonaws.com/000000000000/{cool_name('queue')}"},
+                                    {"name": "WORKER_CONCURRENCY", "value": str(random.randint(1, 10))},
+                                    {"name": "LOG_LEVEL", "value": "info"},
+                                ],
+                                "logConfiguration": {
+                                    "logDriver": "awslogs",
+                                    "options": {
+                                        "awslogs-group": f"/ecs/{family}",
+                                        "awslogs-region": AWS_REGION,
+                                        "awslogs-stream-prefix": "ecs",
+                                    }
+                                },
+                            }
+                        ]
+                    else:  # scheduler
+                        container_definitions = [
+                            {
+                                "name": "scheduler",
+                                "image": f"public.ecr.aws/myorg/scheduler:v{revision}.0",
+                                "cpu": 256,
+                                "memory": 512,
+                                "essential": True,
+                                "environment": [
+                                    {"name": "SCHEDULE", "value": "rate(1 hour)"},
+                                    {"name": "TIMEZONE", "value": "UTC"},
+                                ],
+                                "logConfiguration": {
+                                    "logDriver": "awslogs",
+                                    "options": {
+                                        "awslogs-group": f"/ecs/{family}",
+                                        "awslogs-region": AWS_REGION,
+                                        "awslogs-stream-prefix": "ecs",
+                                    }
+                                },
+                            }
+                        ]
+
+                    client.register_task_definition(
+                        family=family,
+                        networkMode="awsvpc",
+                        requiresCompatibilities=["FARGATE"],
+                        cpu="512" if family == "scheduler" else "1024",
+                        memory="1024" if family == "scheduler" else "2048",
+                        taskRoleArn=f"arn:aws:iam::000000000000:role/{family}-task-role",
+                        executionRoleArn=f"arn:aws:iam::000000000000:role/{family}-execution-role",
+                        containerDefinitions=container_definitions,
+                        tags=[
+                            {"key": "Service", "value": family},
+                            {"key": "Version", "value": f"{revision}.0"},
+                        ]
+                    )
+                    created_task_defs.append(f"{family}:{revision}")
+                    print(f"  ✓ Task Definition: {family}:{revision}")
+                except Exception as e:
+                    print(f"  ✗ Error creating task definition {family}:{revision}: {e}")
+
+        # Create services for each cluster
+        for cluster_name in created_clusters:
+            service_count = random.randint(1, 3)
+            for j in range(service_count):
+                family = random.choice(task_def_families)
+                service_name = f"{family}-service-{j+1}"
+
+                try:
+                    # Clean up existing service
+                    try:
+                        client.update_service(
+                            cluster=cluster_name,
+                            service=service_name,
+                            desiredCount=0
+                        )
+                        client.delete_service(cluster=cluster_name, service=service_name)
+                    except Exception:
+                        pass
+
+                    client.create_service(
+                        cluster=cluster_name,
+                        serviceName=service_name,
+                        taskDefinition=f"{family}:{random.randint(1, 3)}",
+                        desiredCount=random.randint(1, 4),
+                        launchType="FARGATE",
+                        networkConfiguration={
+                            "awsvpcConfiguration": {
+                                "subnets": [f"subnet-{random.randint(10000000, 99999999)}"],
+                                "securityGroups": [f"sg-{random.randint(10000000, 99999999)}"],
+                                "assignPublicIp": "ENABLED",
+                            }
+                        },
+                        loadBalancers=[
+                            {
+                                "targetGroupArn": f"arn:aws:elasticloadbalancing:{AWS_REGION}:000000000000:targetgroup/{service_name}/abc123",
+                                "containerName": family.replace("-", "") if family != "web-app" else "nginx",
+                                "containerPort": 80 if family == "web-app" else 8080,
+                            }
+                        ] if random.random() > 0.5 else [],
+                        tags=[
+                            {"key": "Service", "value": service_name},
+                            {"key": "Cluster", "value": cluster_name},
+                        ]
+                    )
+                    print(f"  ✓ Service: {cluster_name}/{service_name}")
+                except Exception as e:
+                    print(f"  ✗ Error creating service {service_name}: {e}")
+
+        print(f"Created {len(created_clusters)} ECS clusters, {len(created_task_defs)} task definitions")
     except Exception as e:
         print(f"ECS error: {e}")
 

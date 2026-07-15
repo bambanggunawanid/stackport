@@ -1089,3 +1089,246 @@ export interface RDSSnapshotsResponse {
 export interface RDSParameterGroupsResponse {
   parameterGroups: RDSParameterGroupInfo[]
 }
+
+export interface ECSCluster {
+  clusterArn: string
+  clusterName: string
+  status: string
+  registeredContainerInstancesCount: number
+  runningTasksCount: number
+  pendingTasksCount: number
+  activeServicesCount: number
+  statistics: Record<string, number>
+  settings: Record<string, string>
+  tags: Array<{ Key: string; Value: string }>
+}
+
+export interface ECSClusterDetail {
+  cluster: {
+    clusterArn: string
+    clusterName: string
+    status: string
+    registeredContainerInstancesCount: number
+    runningTasksCount: number
+    pendingTasksCount: number
+    activeServicesCount: number
+    statistics: Record<string, number>
+    settings: Record<string, string>
+    configurations: Array<Record<string, unknown>>
+    tags: Array<{ Key: string; Value: string }>
+  }
+}
+
+export interface ECSService {
+  serviceArn: string
+  serviceName: string
+  clusterArn: string
+  status: string
+  desiredCount: number
+  runningCount: number
+  pendingCount: number
+  launchType: string
+  platformVersion?: string
+  taskDefinition: string
+  deploymentStatus: string
+  deployments: Array<Record<string, unknown>>
+  loadBalancers: Array<Record<string, unknown>>
+  networkConfiguration: Record<string, unknown>
+  healthCheckGracePeriodSeconds?: number
+  schedulingStrategy: string
+  capacityProviderStrategy: Array<Record<string, unknown>>
+  tags: Array<{ Key: string; Value: string }>
+}
+
+export interface ECSServiceDetail {
+  service: {
+    serviceArn: string
+    serviceName: string
+    clusterArn: string
+    clusterName: string
+    status: string
+    desiredCount: number
+    runningCount: number
+    pendingCount: number
+    launchType: string
+    platformVersion?: string
+    taskDefinition: string
+    deployments: Array<Record<string, unknown>>
+    loadBalancers: Array<Record<string, unknown>>
+    networkConfiguration: Record<string, unknown>
+    healthCheckGracePeriodSeconds?: number
+    schedulingStrategy: string
+    capacityProviderStrategy: Array<Record<string, unknown>>
+    placementConstraints: Array<Record<string, unknown>>
+    placementStrategy: Array<Record<string, unknown>>
+    serviceConnectConfiguration?: Record<string, unknown>
+    serviceRegistries: Array<Record<string, unknown>>
+    propagateTags?: string
+    enableECSManagedTags?: boolean
+    enableExecuteCommand?: boolean
+    tags: Array<{ Key: string; Value: string }>
+    events: Array<Record<string, unknown>>
+  }
+}
+
+export interface ECSTaskContainer {
+  containerArn: string
+  name: string
+  image: string
+  lastStatus: string
+  healthStatus: string
+  cpu?: number
+  memory?: number
+  managedAgents: Array<Record<string, unknown>>
+}
+
+export interface ECSTask {
+  taskArn: string
+  taskId: string
+  clusterArn: string
+  taskDefinitionArn: string
+  containerInstanceArn?: string
+  lastStatus: string
+  desiredStatus: string
+  startedAt: string | null
+  stoppedAt: string | null
+  stoppedReason?: string
+  stopCode?: string
+  launchType?: string
+  platformVersion?: string
+  group?: string
+  containers: ECSTaskContainer[]
+  attachments: Array<Record<string, unknown>>
+  tags: Array<{ Key: string; Value: string }>
+  unhealthyContainers: number
+}
+
+export interface ECSTaskDetailContainer {
+  containerArn: string
+  name: string
+  image: string
+  lastStatus: string
+  healthStatus: string
+  cpu?: number
+  memory?: number
+  memoryReservation?: number
+  gpuIds: string[]
+  networkBindings: Array<Record<string, unknown>>
+  networkInterfaces: Array<Record<string, unknown>>
+  logConfiguration?: Record<string, unknown>
+  reason?: string
+  exitCode?: number
+  managedAgents: Array<Record<string, unknown>>
+}
+
+export interface ECSTaskDetail {
+  task: {
+    taskArn: string
+    taskId: string
+    clusterArn: string
+    clusterName: string
+    taskDefinitionArn: string
+    containerInstanceArn?: string
+    lastStatus: string
+    desiredStatus: string
+    startedAt: string | null
+    startedBy?: string
+    stoppedAt: string | null
+    stoppedReason?: string
+    stopCode?: string
+    launchType?: string
+    platformVersion?: string
+    group?: string
+    family?: string
+    containers: ECSTaskDetailContainer[]
+    attachments: Array<Record<string, unknown>>
+    capacityProviderName?: string
+    tags: Array<{ Key: string; Value: string }>
+    pullStartedAt?: string | null
+    pullStoppedAt?: string | null
+  }
+}
+
+export interface ECSTaskDefinitionRevision {
+  revision: string
+  arn: string
+  family: string
+}
+
+export interface ECSTaskDefinitionContainer {
+  name: string
+  image: string
+  cpu: number
+  memory?: number
+  memoryReservation?: number
+  essential: boolean
+  command: string[]
+  entryPoint: string[]
+  environment: Array<{ name: string; value: string }>
+  secrets: Array<{ name: string; valueFrom: string }>
+  portMappings: Array<{ containerPort: number; hostPort?: number; protocol?: string }>
+  volumesFrom: Array<Record<string, unknown>>
+  mountPoints: Array<Record<string, unknown>>
+  logConfiguration?: Record<string, unknown>
+  logGroup?: string
+  logDriver?: string
+  healthCheck?: Record<string, unknown>
+  dependsOn: Array<{ containerName: string; condition: string }>
+  repositoryCredentials?: Record<string, unknown>
+  linuxParameters?: Record<string, unknown>
+  dockerSecurityOptions: string[]
+  ulimits: Array<Record<string, unknown>>
+  dnsServers: string[]
+  dnsSearchDomains: string[]
+  extraHosts: Array<Record<string, unknown>>
+  interactive: boolean
+  pseudoTerminal: boolean
+}
+
+export interface ECSTaskDefinitionDetail {
+  taskDefinition: {
+    taskDefinitionArn: string
+    family: string
+    revision: string
+    status: string
+    taskRoleArn?: string
+    executionRoleArn?: string
+    networkMode: string
+    containerDefinitions: ECSTaskDefinitionContainer[]
+    volumes: Array<Record<string, unknown>>
+    placementConstraints: Array<Record<string, unknown>>
+    requiresCompatibilities: string[]
+    cpu?: string
+    memory?: string
+    runtimePlatform?: Record<string, unknown>
+    pidMode?: string
+    ipcMode?: string
+    proxyConfiguration?: Record<string, unknown>
+    inferenceAccelerators: Array<Record<string, unknown>>
+    ephemeralStorage?: Record<string, unknown>
+    tags: Array<{ Key: string; Value: string }>
+    registeredAt: string | null
+    registeredBy?: string
+  }
+}
+
+export interface ECSClustersResponse {
+  clusters: ECSCluster[]
+}
+
+export interface ECSServicesResponse {
+  services: ECSService[]
+}
+
+export interface ECSTasksResponse {
+  tasks: ECSTask[]
+}
+
+export interface ECSTaskDefinitionFamiliesResponse {
+  families: string[]
+}
+
+export interface ECSTaskDefinitionRevisionsResponse {
+  revisions: ECSTaskDefinitionRevision[]
+  family: string
+}

@@ -129,7 +129,7 @@ export function LogsBrowser() {
     }
   }
 
-  const setSelectedStream = (stream: string | null) => {
+  const setSelectedStream = useCallback((stream: string | null) => {
     if (stream === null && selectedGroup) {
       setSearchParams({ group: selectedGroup })
     } else if (stream && selectedGroup) {
@@ -137,7 +137,7 @@ export function LogsBrowser() {
     } else {
       setSearchParams({})
     }
-  }
+  }, [selectedGroup, setSearchParams])
 
   const [groupSearch, setGroupSearch] = useState('')
   const [streamSearch, setStreamSearch] = useState('')
@@ -169,27 +169,45 @@ export function LogsBrowser() {
   const [streamsLoading, setStreamsLoading] = useState(false)
 
   useEffect(() => {
-    if (!selectedGroup) {
-      setStreamsData(null)
-      setSelectedStream(null)
-      setEvents([])
-      setLogGroupTags({})
-      return
-    }
-    setStreamsLoading(true)
-    fetchLogStreams(selectedGroup, streamSearch, 'LastEventTime', true, 50, '', activeEndpoint)
-      .then(setStreamsData)
-      .catch((err) => {
-        toast.error(`Failed to load log streams: ${err.message}`)
+    const controller = new AbortController()
+
+    const loadStreams = async () => {
+      if (!selectedGroup) {
         setStreamsData(null)
-      })
-      .finally(() => setStreamsLoading(false))
+        setEvents([])
+        setLogGroupTags({})
+        setStreamsLoading(false)
+        return
+      }
+      setStreamsLoading(true)
+      try {
+        const result = await fetchLogStreams(selectedGroup, streamSearch, 'LastEventTime', true, 50, '', activeEndpoint)
+        if (!controller.signal.aborted) {
+          setStreamsData(result)
+        }
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          toast.error(`Failed to load log streams: ${err instanceof Error ? err.message : 'Unknown error'}`)
+          setStreamsData(null)
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setStreamsLoading(false)
+        }
+      }
+    }
+
+    loadStreams()
+
+    // Fetch tags separately
     const group = groupsData?.log_groups?.find(g => g.name === selectedGroup)
     if (group?.arn) {
       fetchResourceTags('logs', 'log_groups', group.arn, activeEndpoint)
         .then(res => setLogGroupTags(res.tags))
         .catch(() => setLogGroupTags({}))
     }
+
+    return () => controller.abort()
   }, [selectedGroup, streamSearch, groupsData, activeEndpoint])
 
   // Fetch log events (manual)

@@ -143,6 +143,53 @@ def _get_tags_elasticache_cluster(client: Any, resource_id: str) -> dict[str, st
     return {t["Key"]: t["Value"] for t in tag_resp.get("TagList", [])}
 
 
+def _get_tags_ecs_cluster(client: Any, resource_id: str) -> dict[str, str]:
+    resp = client.describe_clusters(clusters=[resource_id], include=["TAGS"])
+    clusters = resp.get("clusters", [])
+    if not clusters:
+        return {}
+    tags = clusters[0].get("tags") or []
+    return {t["key"]: t["value"] for t in tags}
+
+
+def _get_tags_ecs_service(client: Any, resource_id: str) -> dict[str, str]:
+    # resource_id format: cluster-name/service-name
+    parts = resource_id.split("/", 1)
+    if len(parts) != 2:
+        return {}
+    cluster_name, service_name = parts
+    resp = client.describe_services(cluster=cluster_name, services=[service_name], include=["TAGS"])
+    services = resp.get("services", [])
+    if not services:
+        return {}
+    tags = services[0].get("tags") or []
+    return {t["key"]: t["value"] for t in tags}
+
+
+def _get_tags_ecs_task(client: Any, resource_id: str) -> dict[str, str]:
+    # resource_id format: cluster-name/task-id
+    parts = resource_id.split("/", 1)
+    if len(parts) != 2:
+        return {}
+    cluster_name, task_id = parts
+    resp = client.describe_tasks(cluster=cluster_name, tasks=[task_id], include=["TAGS"])
+    tasks = resp.get("tasks", [])
+    if not tasks:
+        return {}
+    tags = tasks[0].get("tags") or []
+    return {t["key"]: t["value"] for t in tags}
+
+
+def _get_tags_ecs_task_definition(client: Any, resource_id: str) -> dict[str, str]:
+    # resource_id format: family:revision
+    resp = client.describe_task_definition(taskDefinition=resource_id, include=["TAGS"])
+    task_def = resp.get("taskDefinition", {})
+    if not task_def:
+        return {}
+    tags = task_def.get("tags") or []
+    return {t["key"]: t["value"] for t in tags}
+
+
 # --- Tag setters: (service, type) -> callable(client, resource_id, tags) ---
 
 def _set_tags_s3_bucket(client: Any, resource_id: str, tags: dict[str, str]) -> None:
@@ -356,6 +403,89 @@ def _set_tags_elasticache_cluster(client: Any, resource_id: str, tags: dict[str,
         client.add_tags_to_resource(ResourceName=arn, Tags=tag_list)
 
 
+def _set_tags_ecs_cluster(client: Any, resource_id: str, tags: dict[str, str]) -> None:
+    # Get current cluster to find ARN
+    resp = client.describe_clusters(clusters=[resource_id], include=["TAGS"])
+    clusters = resp.get("clusters", [])
+    if not clusters:
+        return
+    cluster_arn = clusters[0].get("clusterArn", "")
+    # Remove existing tags (ECS uses lowercase 'key'/'value')
+    existing_tags = clusters[0].get("tags") or []
+    existing = {t["key"]: t["value"] for t in existing_tags}
+    if existing:
+        client.untag_resource(resourceArn=cluster_arn, tagKeys=list(existing.keys()))
+    # Add new tags
+    if tags:
+        tag_list = [{"key": k, "value": v} for k, v in tags.items()]
+        client.tag_resource(resourceArn=cluster_arn, tags=tag_list)
+
+
+def _set_tags_ecs_service(client: Any, resource_id: str, tags: dict[str, str]) -> None:
+    # resource_id format: cluster-name/service-name
+    parts = resource_id.split("/", 1)
+    if len(parts) != 2:
+        return
+    cluster_name, service_name = parts
+    # Get current service to find ARN
+    resp = client.describe_services(cluster=cluster_name, services=[service_name], include=["TAGS"])
+    services = resp.get("services", [])
+    if not services:
+        return
+    service_arn = services[0].get("serviceArn", "")
+    # Remove existing tags (ECS uses lowercase 'key'/'value')
+    existing_tags = services[0].get("tags") or []
+    existing = {t["key"]: t["value"] for t in existing_tags}
+    if existing:
+        client.untag_resource(resourceArn=service_arn, tagKeys=list(existing.keys()))
+    # Add new tags
+    if tags:
+        tag_list = [{"key": k, "value": v} for k, v in tags.items()]
+        client.tag_resource(resourceArn=service_arn, tags=tag_list)
+
+
+def _set_tags_ecs_task(client: Any, resource_id: str, tags: dict[str, str]) -> None:
+    # resource_id format: cluster-name/task-id
+    parts = resource_id.split("/", 1)
+    if len(parts) != 2:
+        return
+    cluster_name, task_id = parts
+    # Get current task to find ARN
+    resp = client.describe_tasks(cluster=cluster_name, tasks=[task_id], include=["TAGS"])
+    tasks = resp.get("tasks", [])
+    if not tasks:
+        return
+    task_arn = tasks[0].get("taskArn", "")
+    # Remove existing tags (ECS uses lowercase 'key'/'value')
+    existing_tags = tasks[0].get("tags") or []
+    existing = {t["key"]: t["value"] for t in existing_tags}
+    if existing:
+        client.untag_resource(resourceArn=task_arn, tagKeys=list(existing.keys()))
+    # Add new tags
+    if tags:
+        tag_list = [{"key": k, "value": v} for k, v in tags.items()]
+        client.tag_resource(resourceArn=task_arn, tags=tag_list)
+
+
+def _set_tags_ecs_task_definition(client: Any, resource_id: str, tags: dict[str, str]) -> None:
+    # resource_id format: family:revision
+    # Get current task definition to find ARN
+    resp = client.describe_task_definition(taskDefinition=resource_id, include=["TAGS"])
+    task_def = resp.get("taskDefinition", {})
+    if not task_def:
+        return
+    task_def_arn = task_def.get("taskDefinitionArn", "")
+    # Remove existing tags (ECS uses lowercase 'key'/'value')
+    existing_tags = task_def.get("tags") or []
+    existing = {t["key"]: t["value"] for t in existing_tags}
+    if existing:
+        client.untag_resource(resourceArn=task_def_arn, tagKeys=list(existing.keys()))
+    # Add new tags
+    if tags:
+        tag_list = [{"key": k, "value": v} for k, v in tags.items()]
+        client.tag_resource(resourceArn=task_def_arn, tags=tag_list)
+
+
 def _get_tags_cognito_idp_user_pool(client: Any, resource_id: str) -> dict[str, str]:
     pool = client.describe_user_pool(UserPoolId=resource_id)
     arn = pool["UserPool"]["Arn"]
@@ -429,6 +559,10 @@ TAG_GETTER_REGISTRY: dict[tuple[str, str], tuple[str, Any]] = {
     ("cognito-idp", "user_pools"): ("cognito-idp", _get_tags_cognito_idp_user_pool),
     ("elasticmapreduce", "clusters"): ("emr", _get_tags_emr_cluster),
     ("apigateway", "rest_apis"): ("apigateway", _get_tags_apigateway_rest_api),
+    ("ecs", "clusters"): ("ecs", _get_tags_ecs_cluster),
+    ("ecs", "services"): ("ecs", _get_tags_ecs_service),
+    ("ecs", "tasks"): ("ecs", _get_tags_ecs_task),
+    ("ecs", "task_definitions"): ("ecs", _get_tags_ecs_task_definition),
 }
 
 TAG_SETTER_REGISTRY: dict[tuple[str, str], tuple[str, Any]] = {
@@ -455,6 +589,10 @@ TAG_SETTER_REGISTRY: dict[tuple[str, str], tuple[str, Any]] = {
     ("cognito-idp", "user_pools"): ("cognito-idp", _set_tags_cognito_idp_user_pool),
     ("elasticmapreduce", "clusters"): ("emr", _set_tags_emr_cluster),
     ("apigateway", "rest_apis"): ("apigateway", _set_tags_apigateway_rest_api),
+    ("ecs", "clusters"): ("ecs", _set_tags_ecs_cluster),
+    ("ecs", "services"): ("ecs", _set_tags_ecs_service),
+    ("ecs", "tasks"): ("ecs", _set_tags_ecs_task),
+    ("ecs", "task_definitions"): ("ecs", _set_tags_ecs_task_definition),
 }
 
 # Delete registry: (service, type) -> (boto3_service, callable(client, resource_id))

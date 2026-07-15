@@ -19,6 +19,15 @@ import type {
   EC2ListASGsResponse,
   EC2SecurityGroup,
   EC2VPC,
+  ECSClusterDetail,
+  ECSClustersResponse,
+  ECSServiceDetail,
+  ECSServicesResponse,
+  ECSTaskDetail,
+  ECSTaskDefinitionDetail,
+  ECSTaskDefinitionFamiliesResponse,
+  ECSTaskDefinitionRevisionsResponse,
+  ECSTasksResponse,
   EndpointsResponse,
   HealthResponse,
   IAMGroup,
@@ -99,8 +108,25 @@ function encodeS3ObjectKeyInPath(key: string): string {
 
 async function fetchJSON<T>(url: string): Promise<T> {
   const res = await fetch(url)
-  if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`)
-  return res.json()
+  if (!res.ok) {
+    // Check if response is HTML (e.g., error page) before throwing
+    const contentType = res.headers?.get?.('content-type')
+    if (contentType && contentType.includes('text/html')) {
+      throw new Error(`${res.status}: ${res.statusText} - Received HTML response instead of JSON`)
+    }
+    throw new Error(`${res.status}: ${res.statusText}`)
+  }
+  // Use res.json() directly for compatibility with mocks
+  // The error "Unexpected token '<', "<!doctype "..." will naturally occur if HTML is returned
+  try {
+    return await res.json() as T
+  } catch (e) {
+    const errorMsg = e instanceof Error ? e.message : 'Unknown error'
+    if (errorMsg.includes('Unexpected token') || errorMsg.includes('JSON')) {
+      throw new Error(`${res.status}: Invalid JSON response - The server may be returning an HTML error page. Check that the backend is running and the endpoint URL is correct.`)
+    }
+    throw e
+  }
 }
 
 // --- Endpoints ---
@@ -1151,4 +1177,41 @@ export async function fetchRDSParameterGroupDetail(
   const params = new URLSearchParams()
   if (source) params.set('source', source)
   return fetchJSON<RDSParameterGroupDetail>(buildUrl(`/rds/parameter-groups/${encodeURIComponent(groupName)}`, endpoint, params))
+}
+
+export async function fetchECSClusters(endpoint?: string | null): Promise<ECSClustersResponse> {
+  return fetchJSON<ECSClustersResponse>(buildUrl('/ecs/clusters', endpoint))
+}
+
+export async function fetchECSClusterDetail(clusterName: string, endpoint?: string | null): Promise<ECSClusterDetail> {
+  return fetchJSON<ECSClusterDetail>(buildUrl(`/ecs/clusters/${encodeURIComponent(clusterName)}`, endpoint))
+}
+
+export async function fetchECSClusterServices(clusterName: string, endpoint?: string | null): Promise<ECSServicesResponse> {
+  return fetchJSON<ECSServicesResponse>(buildUrl(`/ecs/clusters/${encodeURIComponent(clusterName)}/services`, endpoint))
+}
+
+export async function fetchECSClusterServiceDetail(clusterName: string, serviceName: string, endpoint?: string | null): Promise<ECSServiceDetail> {
+  return fetchJSON<ECSServiceDetail>(buildUrl(`/ecs/clusters/${encodeURIComponent(clusterName)}/services/${encodeURIComponent(serviceName)}`, endpoint))
+}
+
+export async function fetchECSClusterTasks(clusterName: string, status = 'RUNNING', endpoint?: string | null): Promise<ECSTasksResponse> {
+  const params = new URLSearchParams({ status })
+  return fetchJSON<ECSTasksResponse>(buildUrl(`/ecs/clusters/${encodeURIComponent(clusterName)}/tasks`, endpoint, params))
+}
+
+export async function fetchECSClusterTaskDetail(clusterName: string, taskId: string, endpoint?: string | null): Promise<ECSTaskDetail> {
+  return fetchJSON<ECSTaskDetail>(buildUrl(`/ecs/clusters/${encodeURIComponent(clusterName)}/tasks/${encodeURIComponent(taskId)}`, endpoint))
+}
+
+export async function fetchECSTaskDefinitionFamilies(endpoint?: string | null): Promise<ECSTaskDefinitionFamiliesResponse> {
+  return fetchJSON<ECSTaskDefinitionFamiliesResponse>(buildUrl('/ecs/task-definitions', endpoint))
+}
+
+export async function fetchECSTaskDefinitionRevisions(family: string, endpoint?: string | null): Promise<ECSTaskDefinitionRevisionsResponse> {
+  return fetchJSON<ECSTaskDefinitionRevisionsResponse>(buildUrl(`/ecs/task-definitions/${encodeURIComponent(family)}`, endpoint))
+}
+
+export async function fetchECSTaskDefinitionDetail(family: string, revision: string, endpoint?: string | null): Promise<ECSTaskDefinitionDetail> {
+  return fetchJSON<ECSTaskDefinitionDetail>(buildUrl(`/ecs/task-definitions/${encodeURIComponent(family)}/${encodeURIComponent(revision)}`, endpoint))
 }

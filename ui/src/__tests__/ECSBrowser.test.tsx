@@ -221,7 +221,7 @@ describe('ECSBrowser - Log Link Generation', () => {
 
     await waitFor(() => {
       const link = screen.getByText('View Logs →')
-      expect(link).toHaveAttribute('href', '/logs?group=%2Fecs%2Fmy-cluster%2Fweb')
+      expect(link).toHaveAttribute('href', '/resources/logs?group=%2Fecs%2Fmy-cluster%2Fweb')
     })
   })
 })

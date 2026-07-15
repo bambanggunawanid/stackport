@@ -638,7 +638,7 @@ function TaskDetailSheet({
 
   const getLogGroupLink = (logGroup?: string) => {
     if (!logGroup) return null
-    return `/logs?group=${encodeURIComponent(logGroup)}`
+    return `/resources/logs?group=${encodeURIComponent(logGroup)}`
   }
 
   return (
@@ -868,7 +868,7 @@ function TaskDefinitionDetailSheet({
 
   const getLogGroupLink = (logGroup?: string) => {
     if (!logGroup) return null
-    return `/logs?group=${encodeURIComponent(logGroup)}`
+    return `/resources/logs?group=${encodeURIComponent(logGroup)}`
   }
 
   return (

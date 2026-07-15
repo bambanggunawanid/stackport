@@ -331,16 +331,37 @@ def get_task_detail(cluster_name: str, task_id: str, ep: EndpointInfo = Depends(
 
         task = tasks[0]
         containers = task.get("containers", [])
+        
+        # Fetch task definition to get logConfiguration (not included in describe_tasks response)
+        task_definition_arn = task.get("taskDefinitionArn")
+        log_config_by_container = {}
+        if task_definition_arn:
+            try:
+                task_def_response = client.describe_task_definition(
+                    taskDefinition=task_definition_arn,
+                    include=["TAGS"]
+                )
+                task_def = task_def_response.get("taskDefinition", {})
+                container_definitions = task_def.get("containerDefinitions", [])
+                # Build a map of container name -> logConfiguration from task definition
+                for cd in container_definitions:
+                    container_name = cd.get("name")
+                    if container_name:
+                        log_config_by_container[container_name] = cd.get("logConfiguration")
+            except Exception:
+                # If we can't fetch task definition, logConfiguration will be null
+                pass
 
         # Enrich container details
         enriched_containers = []
         for c in containers:
             network_bindings = c.get("networkBindings", [])
             network_interfaces = c.get("networkInterfaces", [])
+            container_name = c.get("name")
 
             enriched_containers.append({
                 "containerArn": c.get("containerArn"),
-                "name": c.get("name"),
+                "name": container_name,
                 "image": c.get("image"),
                 "lastStatus": c.get("lastStatus"),
                 "healthStatus": c.get("healthStatus", "UNKNOWN"),
@@ -350,7 +371,7 @@ def get_task_detail(cluster_name: str, task_id: str, ep: EndpointInfo = Depends(
                 "gpuIds": c.get("gpuIds", []),
                 "networkBindings": network_bindings,
                 "networkInterfaces": network_interfaces,
-                "logConfiguration": c.get("logConfiguration"),
+                "logConfiguration": log_config_by_container.get(container_name) or c.get("logConfiguration"),
                 "reason": c.get("reason"),
                 "exitCode": c.get("exitCode"),
                 "managedAgents": c.get("managedAgents", []),

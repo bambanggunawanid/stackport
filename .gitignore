@@ -6,7 +6,7 @@ venv/
 node_modules/
 .env
 *.egg-info/
-*dist/
+/dist/
 .DS_Store
 *.egg
 .eggs/

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react"
-import { useSearchParams } from "react-router-dom"
-import { Breadcrumb, createHomeSegment } from "@/components/Breadcrumb"
+import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Breadcrumb, createHomeSegment } from '@/components/Breadcrumb'
 import {
   fetchECSClusters,
   fetchECSClusterDetail,
@@ -12,8 +12,8 @@ import {
   fetchECSTaskDefinitionRevisions,
   fetchECSTaskDefinitionDetail,
   fetchResourceTags,
-} from "@/lib/api"
-import { useEndpoint } from "@/hooks/useEndpoint"
+} from '@/lib/api'
+import { useEndpoint } from '@/hooks/useEndpoint'
 import type {
   ECSCluster,
   ECSClusterDetail,
@@ -22,11 +22,18 @@ import type {
   ECSTask,
   ECSTaskDetail,
   ECSTaskDefinitionDetail,
-} from "@/lib/types"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
+} from '@/lib/types'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import {
   Table,
   TableBody,
@@ -34,15 +41,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Separator } from "@/components/ui/separator"
-import { EmptyState } from "@/components/EmptyState"
-import { ExportDropdown } from "@/components/ExportDropdown"
-import { JsonViewer } from "@/components/JsonViewer"
-import { getServiceIcon } from "@/lib/service-icons"
-import { useFetch } from "@/hooks/useFetch"
-import { Input } from "@/components/ui/input"
+} from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Separator } from '@/components/ui/separator'
+import { EmptyState } from '@/components/EmptyState'
+import { ExportDropdown } from '@/components/ExportDropdown'
+import { JsonViewer } from '@/components/JsonViewer'
+import { getServiceIcon } from '@/lib/service-icons'
+import { useFetch } from '@/hooks/useFetch'
+import { Input } from '@/components/ui/input'
 import {
   Container,
   Server,
@@ -57,9 +64,9 @@ import {
   Settings,
   List,
   Tags,
-} from "lucide-react"
-import { toast } from "sonner"
-import { Link } from "react-router-dom"
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { Link } from 'react-router-dom'
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—"
@@ -205,137 +212,101 @@ function ClusterDetailSheet({
   const cluster = data?.cluster
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`}>
-      <div
-        className={`absolute inset-0 bg-black/50 transition-opacity ${
-          open ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={() => onOpenChange(false)}
-      />
-      <div
-        className={`absolute right-0 top-0 h-full w-full max-w-3xl bg-background shadow-lg transition-transform ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b p-4">
-            <div className="flex items-center gap-2">
-              <Container className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">
-                {cluster?.clusterName || clusterName}
-              </h2>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-            >
-              ✕
-            </Button>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <Container className="h-5 w-5" />
+            {cluster?.clusterName || clusterName}
+          </SheetTitle>
+          <SheetDescription className="sr-only">
+            View details for ECS cluster {cluster?.clusterName || clusterName}
+          </SheetDescription>
+        </SheetHeader>
+
+        {loading && (
+          <div className="space-y-4 mt-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-48 w-full" />
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
-            {loading && (
-              <div className="space-y-4">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-48 w-full" />
-              </div>
-            )}
-            {!loading && cluster && (
-              <Tabs defaultValue="details" className="w-full">
-                <TabsList>
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger value="settings">Settings</TabsTrigger>
-                  <TabsTrigger value="tags">Tags</TabsTrigger>
-                  <TabsTrigger value="raw">Raw</TabsTrigger>
-                </TabsList>
-                <TabsContent value="details" className="space-y-4">
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Cluster ARN
-                          </span>
-                          <span className="font-mono text-xs text-right">
-                            {cluster.clusterArn}
-                          </span>
+        )}
+
+        {!loading && cluster && (
+          <div className="mt-4 flex flex-col gap-4">
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList>
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="settings">Settings</TabsTrigger>
+                <TabsTrigger value="tags">Tags</TabsTrigger>
+                <TabsTrigger value="raw">Raw</TabsTrigger>
+              </TabsList>
+              <TabsContent value="details" className="space-y-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Cluster ARN
+                        </span>
+                        <span className="font-mono text-xs text-right">
+                          {cluster.clusterArn}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Status</span>
+                        <Badge variant={getStatusVariant(cluster.status)}>
+                          {cluster.status}
+                        </Badge>
+                      </div>
+                      <Separator />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            Running Tasks
+                          </p>
+                          <p className="text-lg font-semibold">
+                            {cluster.runningTasksCount}
+                          </p>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Status</span>
-                          <Badge variant={getStatusVariant(cluster.status)}>
-                            {cluster.status}
-                          </Badge>
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            Pending Tasks
+                          </p>
+                          <p className="text-lg font-semibold">
+                            {cluster.pendingTasksCount}
+                          </p>
                         </div>
-                        <Separator />
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Running Tasks
-                            </p>
-                            <p className="text-lg font-semibold">
-                              {cluster.runningTasksCount}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Pending Tasks
-                            </p>
-                            <p className="text-lg font-semibold">
-                              {cluster.pendingTasksCount}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Active Services
-                            </p>
-                            <p className="text-lg font-semibold">
-                              {cluster.activeServicesCount}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Container Instances
-                            </p>
-                            <p className="text-lg font-semibold">
-                              {cluster.registeredContainerInstancesCount}
-                            </p>
-                          </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            Active Services
+                          </p>
+                          <p className="text-lg font-semibold">
+                            {cluster.activeServicesCount}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            Container Instances
+                          </p>
+                          <p className="text-lg font-semibold">
+                            {cluster.registeredContainerInstancesCount}
+                          </p>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                  {cluster.statistics &&
-                    Object.keys(cluster.statistics).length > 0 && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">
-                            Statistics
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="grid grid-cols-2 gap-3 text-sm">
-                            {Object.entries(cluster.statistics).map(
-                              ([key, value]) => (
-                                <div key={key} className="flex justify-between">
-                                  <span className="text-muted-foreground">
-                                    {key}
-                                  </span>
-                                  <span className="font-mono">{value}</span>
-                                </div>
-                              )
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                </TabsContent>
-                <TabsContent value="settings" className="space-y-4">
-                  {cluster.settings &&
-                  Object.keys(cluster.settings).length > 0 ? (
+                    </div>
+                  </CardContent>
+                </Card>
+                {cluster.statistics &&
+                  Object.keys(cluster.statistics).length > 0 && (
                     <Card>
-                      <CardContent className="pt-6">
-                        <div className="space-y-2 text-sm">
-                          {Object.entries(cluster.settings).map(
+                      <CardHeader>
+                        <CardTitle className="text-base">
+                          Statistics
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          {Object.entries(cluster.statistics).map(
                             ([key, value]) => (
                               <div key={key} className="flex justify-between">
                                 <span className="text-muted-foreground">
@@ -348,31 +319,51 @@ function ClusterDetailSheet({
                         </div>
                       </CardContent>
                     </Card>
-                  ) : (
-                    <EmptyState
-                      icon={Settings}
-                      title="No Settings"
-                      description="No cluster settings configured"
-                    />
                   )}
-                </TabsContent>
-                <TabsContent value="tags" className="space-y-4">
-                  <TagsTab
-                    service="ecs"
-                    resourceType="clusters"
-                    resourceId={clusterName}
-                    endpoint={activeEndpoint}
+              </TabsContent>
+              <TabsContent value="settings" className="space-y-4">
+                {cluster.settings &&
+                Object.keys(cluster.settings).length > 0 ? (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="space-y-2 text-sm">
+                        {Object.entries(cluster.settings).map(
+                          ([key, value]) => (
+                            <div key={key} className="flex justify-between">
+                              <span className="text-muted-foreground">
+                                {key}
+                              </span>
+                              <span className="font-mono">{value}</span>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <EmptyState
+                    icon={Settings}
+                    title="No Settings"
+                    description="No cluster settings configured"
                   />
-                </TabsContent>
-                <TabsContent value="raw" className="space-y-4">
-                  <JsonViewer data={cluster} />
-                </TabsContent>
-              </Tabs>
-            )}
+                )}
+              </TabsContent>
+              <TabsContent value="tags" className="space-y-4">
+                <TagsTab
+                  service="ecs"
+                  resourceType="clusters"
+                  resourceId={clusterName}
+                  endpoint={activeEndpoint}
+                />
+              </TabsContent>
+              <TabsContent value="raw" className="space-y-4">
+                <JsonViewer data={cluster} />
+              </TabsContent>
+            </Tabs>
           </div>
-        </div>
-      </div>
-    </div>
+        )}
+      </SheetContent>
+    </Sheet>
   )
 }
 
@@ -401,215 +392,199 @@ function ServiceDetailSheet({
   const service = data?.service
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`}>
-      <div
-        className={`absolute inset-0 bg-black/50 transition-opacity ${
-          open ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={() => onOpenChange(false)}
-      />
-      <div
-        className={`absolute right-0 top-0 h-full w-full max-w-3xl bg-background shadow-lg transition-transform ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b p-4">
-            <div className="flex items-center gap-2">
-              <Boxes className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">
-                {service?.serviceName || serviceName}
-              </h2>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-            >
-              ✕
-            </Button>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <Boxes className="h-5 w-5" />
+            {service?.serviceName || serviceName}
+          </SheetTitle>
+          <SheetDescription className="sr-only">
+            View details for ECS service {service?.serviceName || serviceName}
+          </SheetDescription>
+        </SheetHeader>
+
+        {loading && (
+          <div className="space-y-4 mt-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-48 w-full" />
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
-            {loading && (
-              <div className="space-y-4">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-48 w-full" />
-              </div>
-            )}
-            {!loading && service && (
-              <Tabs defaultValue="details" className="w-full">
-                <TabsList>
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger value="deployments">Deployments</TabsTrigger>
-                  <TabsTrigger value="events">Events</TabsTrigger>
-                  <TabsTrigger value="tags">Tags</TabsTrigger>
-                  <TabsTrigger value="raw">Raw</TabsTrigger>
-                </TabsList>
-                <TabsContent value="details" className="space-y-4">
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Service ARN
-                          </span>
-                          <span className="font-mono text-xs text-right">
-                            {service.serviceArn}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Status</span>
-                          <Badge variant={getStatusVariant(service.status)}>
-                            {service.status}
-                          </Badge>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Launch Type
-                          </span>
-                          <span className="text-xs">{service.launchType}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Task Definition
-                          </span>
-                          <span className="font-mono text-xs">
-                            {service.taskDefinition?.split("/")[1] || "—"}
-                          </span>
-                        </div>
-                        <Separator />
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Desired
-                            </p>
-                            <p className="text-lg font-semibold">
-                              {service.desiredCount}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Running
-                            </p>
-                            <p className="text-lg font-semibold">
-                              {service.runningCount}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Pending
-                            </p>
-                            <p className="text-lg font-semibold">
-                              {service.pendingCount}
-                            </p>
-                          </div>
-                        </div>
-                        {service.loadBalancers &&
-                          service.loadBalancers.length > 0 && (
-                            <>
-                              <Separator />
-                              <div>
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  Load Balancers
-                                </p>
-                                {service.loadBalancers.map((lb, i) => (
-                                  <div
-                                    key={i}
-                                    className="text-xs font-mono bg-muted p-2 rounded"
-                                  >
-                                    {JSON.stringify(lb)}
-                                  </div>
-                                ))}
-                              </div>
-                            </>
-                          )}
+        )}
+
+        {!loading && service && (
+          <div className="mt-4 flex flex-col gap-4">
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList>
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="deployments">Deployments</TabsTrigger>
+                <TabsTrigger value="events">Events</TabsTrigger>
+                <TabsTrigger value="tags">Tags</TabsTrigger>
+                <TabsTrigger value="raw">Raw</TabsTrigger>
+              </TabsList>
+              <TabsContent value="details" className="space-y-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Service ARN
+                        </span>
+                        <span className="font-mono text-xs text-right">
+                          {service.serviceArn}
+                        </span>
                       </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                <TabsContent value="deployments" className="space-y-4">
-                  {service.deployments && service.deployments.length > 0 ? (
-                    <div className="space-y-2">
-                      {service.deployments.map(
-                        (dep: Record<string, unknown>, i: number) => (
-                          <Card key={i}>
-                            <CardContent className="pt-4">
-                              <div className="flex items-center justify-between">
-                                <Badge
-                                  variant={
-                                    dep.status === "PRIMARY"
-                                      ? "default"
-                                      : "secondary"
-                                  }
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Status</span>
+                        <Badge variant={getStatusVariant(service.status)}>
+                          {service.status}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Launch Type
+                        </span>
+                        <span className="text-xs">{service.launchType}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Task Definition
+                        </span>
+                        <span className="font-mono text-xs">
+                          {service.taskDefinition?.split("/")[1] || "—"}
+                        </span>
+                      </div>
+                      <Separator />
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            Desired
+                          </p>
+                          <p className="text-lg font-semibold">
+                            {service.desiredCount}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            Running
+                          </p>
+                          <p className="text-lg font-semibold">
+                            {service.runningCount}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            Pending
+                          </p>
+                          <p className="text-lg font-semibold">
+                            {service.pendingCount}
+                          </p>
+                        </div>
+                      </div>
+                      {service.loadBalancers &&
+                        service.loadBalancers.length > 0 && (
+                          <>
+                            <Separator />
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-2">
+                                Load Balancers
+                              </p>
+                              {service.loadBalancers.map((lb, i) => (
+                                <div
+                                  key={i}
+                                  className="text-xs font-mono bg-muted p-2 rounded"
                                 >
-                                  {dep.status as string}
-                                </Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  {dep.runningCount as number} /{" "}
-                                  {dep.desiredCount as number} running
-                                </span>
-                              </div>
-                              <div className="mt-2 text-xs font-mono">
-                                ID: {dep.id as string}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )
-                      )}
+                                  {JSON.stringify(lb)}
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
                     </div>
-                  ) : (
-                    <EmptyState
-                      icon={ClipboardList}
-                      title="No Deployments"
-                      description="No deployments found"
-                    />
-                  )}
-                </TabsContent>
-                <TabsContent value="events" className="space-y-4">
-                  {service.events && service.events.length > 0 ? (
-                    <div className="space-y-2">
-                      {service.events
-                        .slice(0, 20)
-                        .map((event: Record<string, unknown>, i: number) => (
-                          <div
-                            key={i}
-                            className="text-xs border-b pb-2 last:border-0"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-muted-foreground">
-                                {formatRelativeTime(event.createdAt as string)}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="deployments" className="space-y-4">
+                {service.deployments && service.deployments.length > 0 ? (
+                  <div className="space-y-2">
+                    {service.deployments.map(
+                      (dep: Record<string, unknown>, i: number) => (
+                        <Card key={i}>
+                          <CardContent className="pt-4">
+                            <div className="flex items-center justify-between">
+                              <Badge
+                                variant={
+                                  dep.status === "PRIMARY"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                              >
+                                {dep.status as string}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {dep.runningCount as number} /{" "}
+                                {dep.desiredCount as number} running
                               </span>
                             </div>
-                            <p className="mt-1">{event.message as string}</p>
-                          </div>
-                        ))}
-                    </div>
-                  ) : (
-                    <EmptyState
-                      icon={FileText}
-                      title="No Events"
-                      description="No service events found"
-                    />
-                  )}
-                </TabsContent>
-                <TabsContent value="tags" className="space-y-4">
-                  <TagsTab
-                    service="ecs"
-                    resourceType="services"
-                    resourceId={`${clusterName}/${serviceName}`}
-                    endpoint={activeEndpoint}
+                            <div className="mt-2 text-xs font-mono">
+                              ID: {dep.id as string}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    )}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={ClipboardList}
+                    title="No Deployments"
+                    description="No deployments found"
                   />
-                </TabsContent>
-                <TabsContent value="raw" className="space-y-4">
-                  <JsonViewer data={service} />
-                </TabsContent>
-              </Tabs>
-            )}
+                )}
+              </TabsContent>
+              <TabsContent value="events" className="space-y-4">
+                {service.events && service.events.length > 0 ? (
+                  <div className="space-y-2">
+                    {service.events
+                      .slice(0, 20)
+                      .map((event: Record<string, unknown>, i: number) => (
+                        <div
+                          key={i}
+                          className="text-xs border-b pb-2 last:border-0"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-muted-foreground">
+                              {formatRelativeTime(event.createdAt as string)}
+                            </span>
+                          </div>
+                          <p className="mt-1">{event.message as string}</p>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={FileText}
+                    title="No Events"
+                    description="No service events found"
+                  />
+                )}
+              </TabsContent>
+              <TabsContent value="tags" className="space-y-4">
+                <TagsTab
+                  service="ecs"
+                  resourceType="services"
+                  resourceId={`${clusterName}/${serviceName}`}
+                  endpoint={activeEndpoint}
+                />
+              </TabsContent>
+              <TabsContent value="raw" className="space-y-4">
+                <JsonViewer data={service} />
+              </TabsContent>
+            </Tabs>
           </div>
-        </div>
-      </div>
-    </div>
+        )}
+      </SheetContent>
+    </Sheet>
   )
 }
 
@@ -642,205 +617,189 @@ function TaskDetailSheet({
   }
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`}>
-      <div
-        className={`absolute inset-0 bg-black/50 transition-opacity ${
-          open ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={() => onOpenChange(false)}
-      />
-      <div
-        className={`absolute right-0 top-0 h-full w-full max-w-3xl bg-background shadow-lg transition-transform ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b p-4">
-            <div className="flex items-center gap-2">
-              <Container className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">
-                Task {taskId.slice(0, 8)}
-              </h2>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-            >
-              ✕
-            </Button>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <Container className="h-5 w-5" />
+            Task {taskId.slice(0, 8)}
+          </SheetTitle>
+          <SheetDescription className="sr-only">
+            View details for ECS task {taskId}
+          </SheetDescription>
+        </SheetHeader>
+
+        {loading && (
+          <div className="space-y-4 mt-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-48 w-full" />
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
-            {loading && (
-              <div className="space-y-4">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-48 w-full" />
-              </div>
-            )}
-            {!loading && task && (
-              <Tabs defaultValue="containers" className="w-full">
-                <TabsList>
-                  <TabsTrigger value="containers">Containers</TabsTrigger>
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger value="tags">Tags</TabsTrigger>
-                  <TabsTrigger value="raw">Raw</TabsTrigger>
-                </TabsList>
-                <TabsContent value="containers" className="space-y-4">
-                  {task.containers.map((container, i) => {
-                    const logGroup =
-                      (container.logConfiguration?.options as Record<string, string>)?.["awslogs-group"]
-                    return (
-                      <Card key={i}>
-                        <CardHeader>
-                          <CardTitle className="text-base flex items-center justify-between">
-                            <span>{container.name}</span>
-                            <Badge
-                              variant={getStatusVariant(container.healthStatus)}
-                            >
-                              {container.healthStatus}
-                            </Badge>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Image</span>
-                            <span className="font-mono text-xs">
-                              {container.image}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                              Status
-                            </span>
-                            <Badge
-                              variant={getStatusVariant(container.lastStatus)}
-                            >
-                              {container.lastStatus}
-                            </Badge>
-                          </div>
-                          {container.cpu && (
-                            <div className="flex items-center gap-1 text-xs">
-                              <Cpu className="h-3 w-3" />
-                              <span>{container.cpu} vCPU</span>
-                            </div>
-                          )}
-                          {container.memory && (
-                            <div className="flex items-center gap-1 text-xs">
-                              <MemoryStick className="h-3 w-3" />
-                              <span>{container.memory} MB</span>
-                            </div>
-                          )}
-                          {container.networkBindings &&
-                            container.networkBindings.length > 0 && (
-                              <div>
-                                <p className="text-xs text-muted-foreground mb-1">
-                                  Network Bindings
-                                </p>
-                                {container.networkBindings.map(
-                                  (
-                                    binding: Record<string, unknown>,
-                                    j: number
-                                  ) => {
-                                    const hostPort = binding.hostPort as number
-                                    const containerPort = binding.containerPort as number
-                                    const protocol = binding.protocol as string
-                                    return (
-                                      <div
-                                        key={j}
-                                        className="text-xs font-mono bg-muted p-1 rounded"
-                                      >
-                                        {hostPort}:{containerPort}{" "}
-                                        ({protocol})
-                                      </div>
-                                    )
-                                  }
-                                )}
-                              </div>
-                            )}
-                          {logGroup && (
-                            <div className="flex items-center gap-2">
-                              <FileText className="h-3 w-3 text-muted-foreground" />
-                              <Link
-                                to={getLogGroupLink(logGroup) || "#"}
-                                className="text-xs text-primary hover:underline"
-                              >
-                                View Logs →
-                              </Link>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </TabsContent>
-                <TabsContent value="details" className="space-y-4">
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="space-y-2 text-sm">
+        )}
+
+        {!loading && task && (
+          <div className="mt-4 flex flex-col gap-4">
+            <Tabs defaultValue="containers" className="w-full">
+              <TabsList>
+                <TabsTrigger value="containers">Containers</TabsTrigger>
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="tags">Tags</TabsTrigger>
+                <TabsTrigger value="raw">Raw</TabsTrigger>
+              </TabsList>
+              <TabsContent value="containers" className="space-y-4">
+                {task.containers.map((container, i) => {
+                  const logGroup =
+                    (container.logConfiguration?.options as Record<string, string>)?.["awslogs-group"]
+                  return (
+                    <Card key={i}>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center justify-between">
+                          <span>{container.name}</span>
+                          <Badge
+                            variant={getStatusVariant(container.healthStatus)}
+                          >
+                            {container.healthStatus}
+                          </Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Task ARN
-                          </span>
+                          <span className="text-muted-foreground">Image</span>
                           <span className="font-mono text-xs">
-                            {task.taskArn}
+                            {container.image}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Status</span>
-                          <Badge variant={getStatusVariant(task.lastStatus)}>
-                            {task.lastStatus}
+                          <span className="text-muted-foreground">
+                            Status
+                          </span>
+                          <Badge
+                            variant={getStatusVariant(container.lastStatus)}
+                          >
+                            {container.lastStatus}
                           </Badge>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Task Definition
-                          </span>
-                          <span className="font-mono text-xs">
-                            {task.taskDefinitionArn?.split("/")[1] || "—"}
-                          </span>
-                        </div>
-                        <Separator />
+                        {container.cpu && (
+                          <div className="flex items-center gap-1 text-xs">
+                            <Cpu className="h-3 w-3" />
+                            <span>{container.cpu} vCPU</span>
+                          </div>
+                        )}
+                        {container.memory && (
+                          <div className="flex items-center gap-1 text-xs">
+                            <MemoryStick className="h-3 w-3" />
+                            <span>{container.memory} MB</span>
+                          </div>
+                        )}
+                        {container.networkBindings &&
+                          container.networkBindings.length > 0 && (
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">
+                                Network Bindings
+                              </p>
+                              {container.networkBindings.map(
+                                (
+                                  binding: Record<string, unknown>,
+                                  j: number
+                                ) => {
+                                  const hostPort = binding.hostPort as number
+                                  const containerPort = binding.containerPort as number
+                                  const protocol = binding.protocol as string
+                                  return (
+                                    <div
+                                      key={j}
+                                      className="text-xs font-mono bg-muted p-1 rounded"
+                                    >
+                                      {hostPort}:{containerPort}{" "}
+                                      ({protocol})
+                                    </div>
+                                  )
+                                }
+                              )}
+                            </div>
+                          )}
+                        {logGroup && (
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3 w-3 text-muted-foreground" />
+                            <Link
+                              to={getLogGroupLink(logGroup) || "#"}
+                              className="text-xs text-primary hover:underline"
+                            >
+                              View Logs →
+                            </Link>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </TabsContent>
+              <TabsContent value="details" className="space-y-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Task ARN
+                        </span>
+                        <span className="font-mono text-xs">
+                          {task.taskArn}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Status</span>
+                        <Badge variant={getStatusVariant(task.lastStatus)}>
+                          {task.lastStatus}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Task Definition
+                        </span>
+                        <span className="font-mono text-xs">
+                          {task.taskDefinitionArn?.split("/")[1] || "—"}
+                        </span>
+                      </div>
+                      <Separator />
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                          Started:
+                        </span>
+                        <span className="text-xs">
+                          {formatDate(task.startedAt)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ({formatRelativeTime(task.startedAt)})
+                        </span>
+                      </div>
+                      {task.stoppedAt && (
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-muted-foreground" />
                           <span className="text-xs text-muted-foreground">
-                            Started:
+                            Stopped:
                           </span>
                           <span className="text-xs">
-                            {formatDate(task.startedAt)}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            ({formatRelativeTime(task.startedAt)})
+                            {formatDate(task.stoppedAt)}
                           </span>
                         </div>
-                        {task.stoppedAt && (
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">
-                              Stopped:
-                            </span>
-                            <span className="text-xs">
-                              {formatDate(task.stoppedAt)}
-                            </span>
-                          </div>
-                        )}
-                        {task.stoppedReason && (
-                          <div className="bg-destructive/10 p-2 rounded text-xs">
-                            <strong>Stop Reason:</strong> {task.stoppedReason}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                <TabsContent value="raw" className="space-y-4">
-                  <JsonViewer data={task} />
-                </TabsContent>
-              </Tabs>
-            )}
+                      )}
+                      {task.stoppedReason && (
+                        <div className="bg-destructive/10 p-2 rounded text-xs">
+                          <strong>Stop Reason:</strong> {task.stoppedReason}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="raw" className="space-y-4">
+                <JsonViewer data={task} />
+              </TabsContent>
+            </Tabs>
           </div>
-        </div>
-      </div>
-    </div>
+        )}
+      </SheetContent>
+    </Sheet>
   )
 }
 
@@ -872,243 +831,227 @@ function TaskDefinitionDetailSheet({
   }
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`}>
-      <div
-        className={`absolute inset-0 bg-black/50 transition-opacity ${
-          open ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={() => onOpenChange(false)}
-      />
-      <div
-        className={`absolute right-0 top-0 h-full w-full max-w-3xl bg-background shadow-lg transition-transform ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b p-4">
-            <div className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">
-                {family}:{revision}
-              </h2>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-            >
-              ✕
-            </Button>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <ClipboardList className="h-5 w-5" />
+            {family}:{revision}
+          </SheetTitle>
+          <SheetDescription className="sr-only">
+            View details for ECS task definition {family}:{revision}
+          </SheetDescription>
+        </SheetHeader>
+
+        {loading && (
+          <div className="space-y-4 mt-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-48 w-full" />
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
-            {loading && (
-              <div className="space-y-4">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-48 w-full" />
-              </div>
-            )}
-            {!loading && taskDef && (
-              <Tabs defaultValue="containers" className="w-full">
-                <TabsList>
-                  <TabsTrigger value="containers">
-                    Container Definitions
-                  </TabsTrigger>
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger value="tags">Tags</TabsTrigger>
-                  <TabsTrigger value="raw">Raw</TabsTrigger>
-                </TabsList>
-                <TabsContent value="containers" className="space-y-4">
-                  {taskDef.containerDefinitions.map((container, i) => (
-                    <Card key={i}>
-                      <CardHeader>
-                        <CardTitle className="text-base flex items-center justify-between">
-                          <span>{container.name}</span>
-                          <Badge
-                            variant={
-                              container.essential ? "default" : "secondary"
-                            }
-                          >
-                            {container.essential
-                              ? "Essential"
-                              : "Non-essential"}
-                          </Badge>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Image</span>
-                          <span className="font-mono text-xs">
-                            {container.image}
+        )}
+
+        {!loading && taskDef && (
+          <div className="mt-4 flex flex-col gap-4">
+            <Tabs defaultValue="containers" className="w-full">
+              <TabsList>
+                <TabsTrigger value="containers">
+                  Container Definitions
+                </TabsTrigger>
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="tags">Tags</TabsTrigger>
+                <TabsTrigger value="raw">Raw</TabsTrigger>
+              </TabsList>
+              <TabsContent value="containers" className="space-y-4">
+                {taskDef.containerDefinitions.map((container, i) => (
+                  <Card key={i}>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center justify-between">
+                        <span>{container.name}</span>
+                        <Badge
+                          variant={
+                            container.essential ? "default" : "secondary"
+                          }
+                        >
+                          {container.essential
+                            ? "Essential"
+                            : "Non-essential"}
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Image</span>
+                        <span className="font-mono text-xs">
+                          {container.image}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center gap-1 text-xs">
+                          <Cpu className="h-3 w-3" />
+                          <span>{container.cpu} vCPU</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs">
+                          <MemoryStick className="h-3 w-3" />
+                          <span>
+                            {container.memory || container.memoryReservation}{" "}
+                            MB
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="flex items-center gap-1 text-xs">
-                            <Cpu className="h-3 w-3" />
-                            <span>{container.cpu} vCPU</span>
+                      </div>
+                      {container.portMappings &&
+                        container.portMappings.length > 0 && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Port Mappings
+                            </p>
+                            {container.portMappings.map((pm, j) => (
+                              <div
+                                key={j}
+                                className="text-xs font-mono bg-muted p-1 rounded inline-block mr-1"
+                              >
+                                {pm.hostPort || pm.containerPort}:
+                                {pm.containerPort}/{pm.protocol || "tcp"}
+                              </div>
+                            ))}
                           </div>
-                          <div className="flex items-center gap-1 text-xs">
-                            <MemoryStick className="h-3 w-3" />
-                            <span>
-                              {container.memory || container.memoryReservation}{" "}
-                              MB
-                            </span>
-                          </div>
-                        </div>
-                        {container.portMappings &&
-                          container.portMappings.length > 0 && (
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">
-                                Port Mappings
-                              </p>
-                              {container.portMappings.map((pm, j) => (
+                        )}
+                      {container.environment &&
+                        container.environment.length > 0 && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Environment
+                            </p>
+                            <div className="space-y-1">
+                              {container.environment.map((env, j) => (
                                 <div
                                   key={j}
-                                  className="text-xs font-mono bg-muted p-1 rounded inline-block mr-1"
+                                  className="text-xs font-mono bg-muted p-1 rounded"
                                 >
-                                  {pm.hostPort || pm.containerPort}:
-                                  {pm.containerPort}/{pm.protocol || "tcp"}
+                                  {env.name}={env.value}
                                 </div>
                               ))}
                             </div>
-                          )}
-                        {container.environment &&
-                          container.environment.length > 0 && (
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">
-                                Environment
-                              </p>
-                              <div className="space-y-1">
-                                {container.environment.map((env, j) => (
-                                  <div
-                                    key={j}
-                                    className="text-xs font-mono bg-muted p-1 rounded"
-                                  >
-                                    {env.name}={env.value}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        {container.logGroup && (
-                          <div className="flex items-center gap-2 mt-2">
-                            <FileText className="h-3 w-3 text-muted-foreground" />
-                            <Link
-                              to={getLogGroupLink(container.logGroup) || "#"}
-                              className="text-xs text-primary hover:underline"
-                            >
-                              View CloudWatch Logs →
-                            </Link>
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </TabsContent>
-                <TabsContent value="details" className="space-y-4">
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Task Definition ARN
-                          </span>
-                          <span className="font-mono text-xs">
-                            {taskDef.taskDefinitionArn}
-                          </span>
+                      {container.logGroup && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <FileText className="h-3 w-3 text-muted-foreground" />
+                          <Link
+                            to={getLogGroupLink(container.logGroup) || "#"}
+                            className="text-xs text-primary hover:underline"
+                          >
+                            View CloudWatch Logs →
+                          </Link>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Status</span>
-                          <Badge variant={getStatusVariant(taskDef.status)}>
-                            {taskDef.status}
-                          </Badge>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Network Mode
-                          </span>
-                          <span className="text-xs">{taskDef.networkMode}</span>
-                        </div>
-                        {taskDef.taskRoleArn && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                              Task Role
-                            </span>
-                            <span className="font-mono text-xs">
-                              {taskDef.taskRoleArn}
-                            </span>
-                          </div>
-                        )}
-                        {taskDef.executionRoleArn && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                              Execution Role
-                            </span>
-                            <span className="font-mono text-xs">
-                              {taskDef.executionRoleArn}
-                            </span>
-                          </div>
-                        )}
-                        <Separator />
-                        <div className="grid grid-cols-2 gap-4">
-                          {taskDef.cpu && (
-                            <div>
-                              <p className="text-xs text-muted-foreground">
-                                CPU
-                              </p>
-                              <p className="text-lg font-semibold">
-                                {taskDef.cpu}
-                              </p>
-                            </div>
-                          )}
-                          {taskDef.memory && (
-                            <div>
-                              <p className="text-xs text-muted-foreground">
-                                Memory
-                              </p>
-                              <p className="text-lg font-semibold">
-                                {taskDef.memory}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                        {taskDef.requiresCompatibilities &&
-                          taskDef.requiresCompatibilities.length > 0 && (
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">
-                                Compatibilities
-                              </p>
-                              <div className="flex gap-1">
-                                {taskDef.requiresCompatibilities.map(
-                                  (compat, i) => (
-                                    <Badge key={i} variant="outline">
-                                      {compat}
-                                    </Badge>
-                                  )
-                                )}
-                              </div>
-                            </div>
-                          )}
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
-                </TabsContent>
-                <TabsContent value="tags" className="space-y-4">
-                  <TagsTab
-                    service="ecs"
-                    resourceType="task_definitions"
-                    resourceId={`${family}:${revision}`}
-                    endpoint={activeEndpoint}
-                  />
-                </TabsContent>
-                <TabsContent value="raw" className="space-y-4">
-                  <JsonViewer data={taskDef} />
-                </TabsContent>
-              </Tabs>
-            )}
+                ))}
+              </TabsContent>
+              <TabsContent value="details" className="space-y-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Task Definition ARN
+                        </span>
+                        <span className="font-mono text-xs">
+                          {taskDef.taskDefinitionArn}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Status</span>
+                        <Badge variant={getStatusVariant(taskDef.status)}>
+                          {taskDef.status}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Network Mode
+                        </span>
+                        <span className="text-xs">{taskDef.networkMode}</span>
+                      </div>
+                      {taskDef.taskRoleArn && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            Task Role
+                          </span>
+                          <span className="font-mono text-xs">
+                            {taskDef.taskRoleArn}
+                          </span>
+                        </div>
+                      )}
+                      {taskDef.executionRoleArn && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            Execution Role
+                          </span>
+                          <span className="font-mono text-xs">
+                            {taskDef.executionRoleArn}
+                          </span>
+                        </div>
+                      )}
+                      <Separator />
+                      <div className="grid grid-cols-2 gap-4">
+                        {taskDef.cpu && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">
+                              CPU
+                            </p>
+                            <p className="text-lg font-semibold">
+                              {taskDef.cpu}
+                            </p>
+                          </div>
+                        )}
+                        {taskDef.memory && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">
+                              Memory
+                            </p>
+                            <p className="text-lg font-semibold">
+                              {taskDef.memory}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      {taskDef.requiresCompatibilities &&
+                        taskDef.requiresCompatibilities.length > 0 && (
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Compatibilities
+                            </p>
+                            <div className="flex gap-1">
+                              {taskDef.requiresCompatibilities.map(
+                                (compat, i) => (
+                                  <Badge key={i} variant="outline">
+                                    {compat}
+                                  </Badge>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="tags" className="space-y-4">
+                <TagsTab
+                  service="ecs"
+                  resourceType="task_definitions"
+                  resourceId={`${family}:${revision}`}
+                  endpoint={activeEndpoint}
+                />
+              </TabsContent>
+              <TabsContent value="raw" className="space-y-4">
+                <JsonViewer data={taskDef} />
+              </TabsContent>
+            </Tabs>
           </div>
-        </div>
-      </div>
-    </div>
+        )}
+      </SheetContent>
+    </Sheet>
   )
 }
 
